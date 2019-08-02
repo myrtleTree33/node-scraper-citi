@@ -118,6 +118,7 @@ const scrapeDetails = async link => {
 
   let discountPercent = details.match(/(.*)%/);
   discountPercent = discountPercent ? parseInt(discountPercent, 10) : null;
+  discountPercent = discountPercent ? discountPercent : null; // for NaN
 
   let returnVoucherAmount = details.match(/SGD(.*) return voucher/i);
   returnVoucherAmount = returnVoucherAmount ? returnVoucherAmount[1] : null;
@@ -156,6 +157,11 @@ const processResult = async ($, elem) => {
   const title = $('a > div > h4', elem).text();
   const link = $('a', elem).attr('href');
   const tags = [$('a > div > div > p.card__subcategory', elem).text()];
+
+  // Skip in the case of dead link
+  if (!link) {
+    return Promise.resolve({});
+  }
   const details = await scrapeDetails(link);
   return { title, link, tags, ...details };
 };
