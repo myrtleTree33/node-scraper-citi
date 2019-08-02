@@ -1,7 +1,7 @@
 {
-  "name": "node-es6-starter",
+  "name": "node-scraper-citi",
   "version": "1.0.0",
-  "description": "Node.js ES6 starter with Babel & ESLint",
+  "description": "A scraper for Citibank dining promos in Singapore.",
   "main": "dist/index.js",
   "babel": {
     "presets": [
@@ -34,12 +34,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/palanik/node-es6-starter.git"
+    "url": "https://github.com/myrtleTree33/node-scraper-citi"
   },
   "publishConfig": {
     "registry": "https://registry.npmjs.org"
   },
-  "author": "N. Palani Kumanan",
+  "author": "Joel Tong",
   "license": "MIT",
   "devDependencies": {
     "babel-cli": "^6.26.0",
@@ -60,7 +60,7 @@
     "axios": "^0.19.0",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "cheerio": "^1.0.0-rc.3",
-    "moment": "^2.22.2",
+    "moment": "^2.24.0",
     "mongoose": "^5.2.9",
     "request": "^2.88.0",
     "string-strip-html": "^3.2.0"

@@ -1,5 +1,52 @@
 import Axios from 'axios';
 import Cheerio from 'cheerio';
+import moment from 'moment';
+
+const expandResults = results => {
+  const expandedResults = [];
+  for (let i = 0; i < results.length; i++) {
+    const curr = results[i];
+
+    const currCopy = { ...curr };
+    delete currCopy.outlets;
+
+    // Expand outlets if there are
+    if (curr.outlets && curr.outlets.length > 0) {
+      curr.outlets.map(outlet => {
+        const { address, telephone, loc } = outlet;
+        const title = `${currCopy.title} - ${address.split(',')[0]}`;
+
+        expandedResults.push({
+          ...currCopy,
+          title,
+          address,
+          telephone,
+          loc
+        });
+      });
+    }
+    expandedResults.push(currCopy);
+  }
+
+  return expandedResults;
+};
+
+const processOutlet = ($, elem) => {
+  const address = ($('div.location-details__address', elem).text() || '')
+    .replace(/\s+/g, ' ')
+    .replace(/Singapore - /, ', Singapore ')
+    .trim();
+
+  const telephone = $(
+    'div.location-details__contact > a:nth-child(1) > span',
+    elem
+  )
+    .text()
+    .replace(/\s+/g, '')
+    .replace(/Phone:/, '');
+
+  return { address, telephone };
+};
 
 const scrapeDetails = async link => {
   const res = await Axios.get(link);
@@ -23,9 +70,13 @@ const scrapeDetails = async link => {
     .replace(/Singapore - /, ', Singapore ')
     .trim();
 
-  let tos = $('#tnc > div > ul > li > strong')
-    .map((i, elem) => $(elem).text())
-    .get();
+  const tos = $(
+    '#app > section:nth-child(3) > div > div > div > div.grid-xxs-12.grid-sm-6.grid-offer-details > div > div.offer-details__footer > div.tnc-block > div'
+  )
+    .text()
+    .split('- ')
+    .map(s => s.trim())
+    .filter(Boolean);
 
   const locs = [];
   try {
@@ -40,9 +91,19 @@ const scrapeDetails = async link => {
       .map(m => m.match(/\d+\.\d+/)[0]);
 
     for (let i = 0; i < lat.length; i++) {
-      locs.push([lng[i], lat[i]]);
+      locs.push([parseFloat(lng[i], 10), parseFloat(lat[i], 10)]);
     }
   } catch (e) {}
+
+  const outlets = $(
+    '#app > section:nth-child(4) > div > div > div > div:nth-child(2) > div.offer-location-more > div > div'
+  )
+    .map((i, elem) => processOutlet($, elem))
+    .get();
+
+  for (let i = 0; i < outlets.length; i++) {
+    outlets[i] = { ...outlets[i], loc: locs[i + 1] };
+  }
 
   const telephone = $(
     '#app > section:nth-child(4) > div > div > div > div > div.grid-xxs-12.grid-sm-6.grid-offer-location-details > div > div.location-details__contact > a:nth-child(1) > span'
@@ -51,20 +112,44 @@ const scrapeDetails = async link => {
     .replace(/\s+/g, '')
     .replace(/Phone:/, '');
 
+  const details = $(
+    '#app > section:nth-child(3) > div > div > div > div.grid-xxs-12.grid-sm-6.grid-offer-details > div > div.offer-details__header > h3'
+  ).text();
+
+  let discountPercent = details.match(/(.*)%/);
+  discountPercent = discountPercent ? parseInt(discountPercent, 10) : null;
+
+  let returnVoucherAmount = details.match(/SGD(.*) return voucher/i);
+  returnVoucherAmount = returnVoucherAmount ? returnVoucherAmount[1] : null;
+
+  const isOneForOne = /1-for-1/.test(details);
+
+  const hasFreeStuff = /Complimentary/i.test(details);
+
+  let minPax = details.match(/(\s*[0-9]+)([ |,]*)/g);
+
+  let dateEnd = $(
+    '#app > section:nth-child(3) > div > div > div > div.grid-xxs-12.grid-sm-6.grid-offer-details > div > p'
+  ).text();
+  dateEnd = dateEnd.match(/till: (.*)/);
+  dateEnd = dateEnd && dateEnd.length > 1 ? dateEnd[1] : null;
+  dateEnd = moment(dateEnd, 'LL').toDate();
+
   return {
     id,
     imgUrls,
     address,
-    locs,
-    telephone
-    // maxPax,
-    // daysExpiry,
-    // minPrice,
-    // maxPrice,
-    // maxDiscount,
-    // offers,
-    // availableOffers,
-    // tos
+    telephone,
+    discountPercent,
+    details,
+    isOneForOne,
+    dateEnd,
+    loc: locs[0],
+    outlets,
+    tos,
+    returnVoucherAmount,
+    hasFreeStuff,
+    minPax
   };
 };
 
@@ -87,13 +172,18 @@ export const scrapeOffers = async (
   const res = await Axios.get(url);
   const $ = Cheerio.load(res.data);
 
-  let results = $('#offers-wrap > div')
+  let outletPromises = $('#offers-wrap > div')
     .map((i, elem) => processResult($, elem))
     .get();
 
-  results = results.length > 0 ? results.splice(0, results.length - 1) : [];
+  outletPromises =
+    outletPromises.length > 0
+      ? outletPromises.splice(0, outletPromises.length - 1)
+      : [];
 
-  return Promise.all(results);
+  // Normalize and expand outlets if there are
+  const results = await Promise.all(outletPromises);
+  return Promise.resolve(expandResults(results));
 };
 
 export const scrapeEntry = async (opts = { url: undefined }) => {};
