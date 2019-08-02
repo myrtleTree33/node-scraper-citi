@@ -148,8 +148,7 @@ const scrapeDetails = async link => {
     outlets,
     tos,
     returnVoucherAmount,
-    hasFreeStuff,
-    minPax
+    hasFreeStuff
   };
 };
 
