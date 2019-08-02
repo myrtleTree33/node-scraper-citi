@@ -6,16 +6,16 @@ const expandResults = results => {
   const expandedResults = [];
   for (let i = 0; i < results.length; i++) {
     const curr = results[i];
-
+    const { id } = curr;
     const currCopy = { ...curr };
     delete currCopy.outlets;
 
     // Expand outlets if there are
     if (curr.outlets && curr.outlets.length > 0) {
       curr.outlets.map(outlet => {
-        const { id, address, telephone, loc } = outlet;
+        const { address, telephone, loc } = outlet;
         const title = `${currCopy.title} - ${address.split(',')[0]}`;
-        const idComposed = `${title}-${id.replace(/\s/g, '-')}`;
+        const idComposed = `${id}-${title.replace(/\s/g, '-')}`;
 
         expandedResults.push({
           ...currCopy,
