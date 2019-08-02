@@ -13,11 +13,13 @@ const expandResults = results => {
     // Expand outlets if there are
     if (curr.outlets && curr.outlets.length > 0) {
       curr.outlets.map(outlet => {
-        const { address, telephone, loc } = outlet;
+        const { id, address, telephone, loc } = outlet;
         const title = `${currCopy.title} - ${address.split(',')[0]}`;
+        const idComposed = `${title}-${id.replace(/\s/g, '-')}`;
 
         expandedResults.push({
           ...currCopy,
+          id: idComposed,
           title,
           address,
           telephone,
